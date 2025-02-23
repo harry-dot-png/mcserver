@@ -4,11 +4,7 @@ import requests
 
 from mcserver.util import download, comparable_version
 
-STARTUP_SH = """
-#!/usr/bin/env sh
-
-java -Xms4G -Xmx60G -jar $JARNAME$ nogui
-"""
+START_PAPER_SH_TEMPLATE = Path(__file__).parent / "resources" / "start-paper.sh.template"
 
 def get_latest_version() -> str:
     """Get the latest stable Paper jar version."""
@@ -28,7 +24,7 @@ def get_latest_stable_version_and_build() -> tuple[str, str]:
 
 def get_jar_version_and_build(name: str) -> tuple[str, str]:
     """Get the version and build number from a Paper jar filename."""
-    return tuple(name.split(".", 1)[0].split("-")[1:])
+    return tuple(name.rsplit(".", 1)[0].split("-")[1:])
 
 def get_latest_stable_jarname() -> str:
     """Get the filename of the latest stable Paper jar."""
@@ -49,8 +45,10 @@ def latest_jarname(old_name: str) -> str:
     return new_name if comparable_version(new_version) > comparable_version(old_version) and new_build > old_build else old_name
 
 def startup_sh(server_jar: Path) -> Path:
-    script = STARTUP_SH.replace("$JARNAME$", server_jar.name)
-    script_path: Path = server_jar.parent / "start.sh"
+    with START_PAPER_SH_TEMPLATE.open() as template:
+        script = template.read()
+
+    script_path: Path = server_jar.parent / "start-paper.sh"
     with script_path.open("w") as script_file:
-        script_file.write(script)
+        script_file.write(script.replace("$JARNAME$", server_jar.name))
     return script_path
