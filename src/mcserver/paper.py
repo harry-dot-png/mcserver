@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 import requests
 
@@ -69,4 +70,7 @@ def startup_sh(server_jar: Path) -> Path:
     script_path: Path = server_jar.parent / "start-paper.sh"
     with script_path.open("w") as script_file:
         script_file.write(script.replace("$JARNAME$", server_jar.name))
+
+    subprocess.run(f"chmod +x {script_path.as_posix()}", shell=True)
+    
     return script_path
