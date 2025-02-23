@@ -1,21 +1,42 @@
 import argparse
 from pathlib import Path
 
-from mcserver.paper import get_latest_stable_jarname, download_jar, latest_jarname, startup_sh
-from mcserver.screen import screen_exists, create_screen, execute_in_screen
+from mcserver.paper import (
+    download_jar,
+    get_latest_stable_jarname,
+    latest_jarname,
+    startup_sh,
+)
+from mcserver.screen import create_screen, execute_in_screen, screen_exists
+
 
 def main() -> None:
-    parser = argparse.ArgumentParser("Minecraft Paper Server", description="Python API for starting and updating a Minecraft server using Paper.")
-    parser.add_argument("command", help="Command to execute. Currently, only 'start' supported.", type=str)
-    parser.add_argument("--update", help="Whether to update the server to the latest version.", action="store_true")
-    parser.add_argument("--root", help="Root directory where the Paper server jar is located. Defaults to the current working directory.", type=Path, default=Path.cwd())
+    parser = argparse.ArgumentParser(
+        "Minecraft Paper Server",
+        description="Python API for starting and updating a Minecraft server using Paper.",
+    )
+    parser.add_argument(
+        "command",
+        help="Command to execute. Currently, only 'start' supported.",
+        type=str,
+    )
+    parser.add_argument(
+        "--update",
+        help="Whether to update the server to the latest version.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--root",
+        help="Root directory where the Paper server jar is located. Defaults to the current working directory.",
+        type=Path,
+        default=Path.cwd(),
+    )
 
     args = parser.parse_args()
 
     if args.command != "start":
-        print(f"Unsupported command: {args.comand}")
         return
-    
+
     root: Path = args.root.resolve()
 
     # Grab a Paper jar
@@ -26,7 +47,7 @@ def main() -> None:
         # Need to download a new Paper jar
         jarname = get_latest_stable_jarname()
         jar = download_jar(jarname, root)
-    
+
     # Update Paper jar if needed
     if args.update:
         jarname = latest_jarname(jar.name)
@@ -54,5 +75,5 @@ def main() -> None:
         # This only needs to happen when starting the screen for the
         # first time
         execute_in_screen("playit", "playit", pwd=root)
-    
+
     return
