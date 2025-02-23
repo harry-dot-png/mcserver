@@ -1,0 +1,19 @@
+[project]
+name = "mcserver"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { email = "byers.harry@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "requests>=2.32.3",
+]
+
+[project.scripts]
+mcserver = "mcserver:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
