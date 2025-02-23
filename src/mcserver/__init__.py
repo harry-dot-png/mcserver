@@ -54,3 +54,5 @@ def main() -> None:
         # This only needs to happen when starting the screen for the
         # first time
         execute_in_screen("playit", "playit", pwd=root)
+    
+    return
