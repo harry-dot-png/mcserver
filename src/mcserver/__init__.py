@@ -74,6 +74,6 @@ def main() -> None:
         # Start playit on the "playit" screen
         # This only needs to happen when starting the screen for the
         # first time
-        execute_in_screen("playit", "playit", pwd=root)
+        execute_in_screen("playit", "/usr/local/bin/playit start", pwd=root)
 
     return
