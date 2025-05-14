@@ -1,3 +1,9 @@
 #!/usr/bin/env sh
 
-java -Xms4G -Xmx60G -jar $JARNAME$ --nogui
+while [ true ]; do
+    java -Xms4G -Xmx60G -jar $JARNAME$ --nogui
+    echo **** SERVER RESTARTING IN 5 SECONDS! ****
+    echo **** PRESS CTRL + C TO STOP! ****
+    sleep 5
+    echo **** RESTARTING... ****
+done
