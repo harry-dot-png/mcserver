@@ -1,19 +1,23 @@
+"""Main script for mcserver."""
+
 import argparse
 from pathlib import Path
 
 from mcserver.paper import (
     download_jar,
-    get_latest_stable_jarname,
+    get_latest_jarname,
     latest_jarname,
     startup_sh,
 )
 from mcserver.screen import create_screen, execute_in_screen, screen_exists
 
 
-def main() -> None:
+def main() -> None:  # noqa: D103
     parser = argparse.ArgumentParser(
         "Minecraft Paper Server",
-        description="Python API for starting and updating a Minecraft server using Paper.",
+        description=(
+            "Python API for starting and updating a Minecraft server using Paper."
+        ),
     )
     parser.add_argument(
         "command",
@@ -26,8 +30,16 @@ def main() -> None:
         action="store_true",
     )
     parser.add_argument(
+        "--allow-experimental",
+        help="Whether to allow experimental Paper builds.",
+        action="store_true",
+    )
+    parser.add_argument(
         "--root",
-        help="Root directory where the Paper server jar is located. Defaults to the current working directory.",
+        help=(
+            "Root directory where the Paper server jar is located. Defaults to the "
+            "current working directory."
+        ),
         type=Path,
         default=Path.cwd(),
     )
@@ -45,12 +57,12 @@ def main() -> None:
         jar = next(root.glob("paper-*.jar"))
     except StopIteration:
         # Need to download a new Paper jar
-        jarname = get_latest_stable_jarname()
+        jarname = get_latest_jarname(allow_experimental=args.allow_experimental)
         jar = download_jar(jarname, root)
 
     # Update Paper jar if needed
     if args.update:
-        jarname = latest_jarname(jar.name)
+        jarname = latest_jarname(jar.name, allow_experimental=args.allow_experimental)
 
         if jarname != jar.name:
             # Delete old Paper jar

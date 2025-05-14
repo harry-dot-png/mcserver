@@ -1,5 +1,9 @@
-from pathlib import Path
+"""Function for working with Paper."""
+
+# ruff: noqa: S602, S113
+
 import subprocess
+from pathlib import Path
 
 import requests
 
@@ -18,18 +22,27 @@ def get_latest_version() -> str:
     return data["versions"][-1]
 
 
-def get_latest_stable_version_and_build() -> tuple[str, str]:
+def get_latest_version_and_build(
+    *, allow_experimental: bool = False
+) -> tuple[str, str]:
     """Get the latest stable Paper jar version and build number."""
     version = get_latest_version()
     with requests.get(
-        f"https://api.papermc.io/v2/projects/paper/versions/{version}/builds"
+        f"https://api.papermc.io/v2/projects/paper/versions/{version}/builds",
     ) as response:
         data = response.json()
 
-    stables = [
-        build["build"] for build in data["builds"] if build["channel"] == "default"
-    ]
-    return version, str(stables[-1])
+    try:
+        latests = [
+            build["build"]
+            for build in data["builds"]
+            if (not allow_experimental and build["channel"] == "default")
+            or (allow_experimental and build["channel"] in ("default", "experimental"))
+        ]
+        return version, str(latests[-1])
+    except IndexError as exc:
+        msg = "Could not locate latest Paper.jar!"
+        raise RuntimeError(msg) from exc
 
 
 def get_jar_version_and_build(name: str) -> tuple[str, str]:
@@ -37,9 +50,9 @@ def get_jar_version_and_build(name: str) -> tuple[str, str]:
     return tuple(name.rsplit(".", 1)[0].split("-")[1:])
 
 
-def get_latest_stable_jarname() -> str:
-    """Get the filename of the latest stable Paper jar."""
-    version, build = get_latest_stable_version_and_build()
+def get_latest_jarname(*, allow_experimental: bool = False) -> str:
+    """Get the filename of the latest Paper jar."""
+    version, build = get_latest_version_and_build(allow_experimental=allow_experimental)
     return f"paper-{version}-{build}.jar"
 
 
@@ -50,9 +63,9 @@ def download_jar(name: str, location: Path) -> Path:
     return download(url, name=name, location=location)
 
 
-def latest_jarname(old_name: str) -> str:
-    """The latest Paper jar. Will request the Paper API to verify."""
-    new_name = get_latest_stable_jarname()
+def latest_jarname(old_name: str, *, allow_experimental: bool = False) -> str:
+    """Get the latest Paper jar. Requests the Paper API to verify."""
+    new_name = get_latest_jarname(allow_experimental=allow_experimental)
     old_version, old_build = get_jar_version_and_build(old_name)
     new_version, new_build = get_jar_version_and_build(new_name)
     return (
@@ -64,6 +77,7 @@ def latest_jarname(old_name: str) -> str:
 
 
 def startup_sh(server_jar: Path) -> Path:
+    """Overwrite the startup script template with a new Paper.jar."""
     with START_PAPER_SH_TEMPLATE.open() as template:
         script = template.read()
 
@@ -71,6 +85,6 @@ def startup_sh(server_jar: Path) -> Path:
     with script_path.open("w") as script_file:
         script_file.write(script.replace("$JARNAME$", server_jar.name))
 
-    subprocess.run(f"chmod +x {script_path.as_posix()}", shell=True)
-    
+    subprocess.run(f"chmod +x {script_path.as_posix()}", shell=True, check=False)
+
     return script_path
