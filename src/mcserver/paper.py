@@ -3,6 +3,7 @@
 # ruff: noqa: S602, S113
 
 import subprocess
+from importlib.metadata import version
 from pathlib import Path
 
 import requests
@@ -13,19 +14,24 @@ START_PAPER_SH_TEMPLATE = (
     Path(__file__).parent / "resources" / "start-paper.sh.template"
 )
 
-HEADERS = {}
+headers = {
+    "User-Agent": f"mcserver/{version('mcserver')} (https://github.com/harry-dot-png/mcserver)"
+}
 
 
 def get_latest_version() -> str:
     """Get the latest supported version of Paper."""
-    with requests.get("https://fill.papermc.io/v3/projects/paper/versions") as response:
+    with requests.get(
+        "https://fill.papermc.io/v3/projects/paper/versions",
+        headers=headers,
+    ) as response:
         response.raise_for_status()
         data = response.json()
 
-    for version in data["versions"]:
-        if version["version"]["support"]["status"] != "SUPPORTED":
+    for mcversion in data["versions"]:
+        if mcversion["version"]["support"]["status"] != "SUPPORTED":
             continue
-        return version["version"]["id"]
+        return mcversion["version"]["id"]
 
     msg = "Could not locate a supported version of Paper..."
     raise Exception(msg)  # noqa: TRY002
@@ -39,6 +45,7 @@ def get_latest_build() -> tuple[str, str]:
     version = get_latest_version()
     with requests.get(
         f"https://fill.papermc.io/v3/projects/paper/versions/{version}/builds/latest",
+        headers=headers,
     ) as response:
         response.raise_for_status()
         data = response.json()
