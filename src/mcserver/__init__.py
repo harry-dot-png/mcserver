@@ -4,12 +4,11 @@ import argparse
 from pathlib import Path
 
 from mcserver.paper import (
-    download_jar,
     get_latest_jarname,
-    latest_jarname,
     startup_sh,
 )
 from mcserver.screen import create_screen, execute_in_screen, screen_exists
+from mcserver.util import download
 
 
 def main() -> None:  # noqa: D103
@@ -27,11 +26,6 @@ def main() -> None:  # noqa: D103
     parser.add_argument(
         "--update",
         help="Whether to update the server to the latest version.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--allow-experimental",
-        help="Whether to allow experimental Paper builds.",
         action="store_true",
     )
     parser.add_argument(
@@ -57,18 +51,18 @@ def main() -> None:  # noqa: D103
         jar = next(root.glob("paper-*.jar"))
     except StopIteration:
         # Need to download a new Paper jar
-        jarname = get_latest_jarname(allow_experimental=args.allow_experimental)
-        jar = download_jar(jarname, root)
+        jarname, url = get_latest_jarname("paper-0.0.0-0.jar")
+        jar = download(url, jarname, root)
 
     # Update Paper jar if needed
     if args.update:
-        jarname = latest_jarname(jar.name, allow_experimental=args.allow_experimental)
+        jarname, url = get_latest_jarname(jar.name)
 
-        if jarname != jar.name:
+        if url is not None:
             # Delete old Paper jar
             jar.unlink()
             # Download new Paper jar
-            jar = download_jar(jarname, root)
+            jar = download(url, jarname, root)
 
     # Generate start script
     startup = startup_sh(jar)

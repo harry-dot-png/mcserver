@@ -7,42 +7,45 @@ from pathlib import Path
 
 import requests
 
-from mcserver.util import comparable_version, download
+from mcserver.util import comparable_version
 
 START_PAPER_SH_TEMPLATE = (
     Path(__file__).parent / "resources" / "start-paper.sh.template"
 )
 
+HEADERS = {}
+
 
 def get_latest_version() -> str:
-    """Get the latest stable Paper jar version."""
-    with requests.get("https://api.papermc.io/v2/projects/paper") as response:
+    """Get the latest supported version of Paper."""
+    with requests.get("https://fill.papermc.io/v3/projects/paper/versions") as response:
         response.raise_for_status()
         data = response.json()
-    return data["versions"][-1]
+
+    for version in data["versions"]:
+        if version["version"]["support"]["status"] != "SUPPORTED":
+            continue
+        return version["version"]["id"]
+
+    msg = "Could not locate a supported version of Paper..."
+    raise Exception(msg)  # noqa: TRY002
 
 
-def get_latest_version_and_build(
-    *, allow_experimental: bool = False
-) -> tuple[str, str]:
-    """Get the latest stable Paper jar version and build number."""
+def get_latest_build() -> tuple[str, str]:
+    """
+    Return the latest Paper build. Returns the jar name and its download
+    URL.
+    """  # noqa: D205, D212
     version = get_latest_version()
     with requests.get(
-        f"https://api.papermc.io/v2/projects/paper/versions/{version}/builds",
+        f"https://fill.papermc.io/v3/projects/paper/versions/{version}/builds/latest",
     ) as response:
+        response.raise_for_status()
         data = response.json()
 
-    try:
-        latests = [
-            build["build"]
-            for build in data["builds"]
-            if (not allow_experimental and build["channel"] == "default")
-            or (allow_experimental and build["channel"] in ("default", "experimental"))
-        ]
-        return version, str(latests[-1])
-    except IndexError as exc:
-        msg = "Could not locate latest Paper.jar!"
-        raise RuntimeError(msg) from exc
+    return data["downloads"]["server:default"]["name"], data["downloads"][
+        "server:default"
+    ]["url"]
 
 
 def get_jar_version_and_build(name: str) -> tuple[str, str]:
@@ -50,29 +53,19 @@ def get_jar_version_and_build(name: str) -> tuple[str, str]:
     return tuple(name.rsplit(".", 1)[0].split("-")[1:])
 
 
-def get_latest_jarname(*, allow_experimental: bool = False) -> str:
-    """Get the filename of the latest Paper jar."""
-    version, build = get_latest_version_and_build(allow_experimental=allow_experimental)
-    return f"paper-{version}-{build}.jar"
-
-
-def download_jar(name: str, location: Path) -> Path:
-    """Download a Paper jar given its filename."""
-    version, build = get_jar_version_and_build(name)
-    url = f"https://api.papermc.io/v2/projects/paper/versions/{version}/builds/{build}/downloads/{name}"
-    return download(url, name=name, location=location)
-
-
-def latest_jarname(old_name: str, *, allow_experimental: bool = False) -> str:
-    """Get the latest Paper jar. Requests the Paper API to verify."""
-    new_name = get_latest_jarname(allow_experimental=allow_experimental)
+def get_latest_jarname(old_name: str) -> tuple[str, str | None]:
+    """
+    Get the latest Paper jar. Requests the Paper API to verify. Also
+    returns the download URL if there is a newer Paper jar.
+    """  # noqa: D205, D212
+    new_name, url = get_latest_build()
     old_version, old_build = get_jar_version_and_build(old_name)
     new_version, new_build = get_jar_version_and_build(new_name)
     return (
-        new_name
+        (new_name, url)
         if comparable_version(new_version) > comparable_version(old_version)
         and new_build > old_build
-        else old_name
+        else (old_name, None)
     )
 
 
